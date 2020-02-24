@@ -6,7 +6,7 @@ import com.goyeau.kubernetes.client.operation._
 import io.circe._
 import io.k8s.api.apps.v1.{StatefulSet, StatefulSetList}
 import org.http4s.client.Client
-import org.http4s.Uri.uri
+import org.http4s.implicits._
 
 private[client] case class StatefulSetsApi[F[_]](httpClient: Client[F], config: KubeConfig)(
   implicit
@@ -15,7 +15,7 @@ private[client] case class StatefulSetsApi[F[_]](httpClient: Client[F], config: 
   encoder: Encoder[StatefulSet],
   decoder: Decoder[StatefulSet]
 ) extends Listable[F, StatefulSetList] {
-  val resourceUri = uri("/apis") / "apps" / "v1" / "statefulsets"
+  val resourceUri = uri"/apis" / "apps" / "v1" / "statefulsets"
 
   def namespace(namespace: String) = NamespacedStatefulSetsApi(httpClient, config, namespace)
 }
@@ -37,5 +37,5 @@ private[client] case class NamespacedStatefulSetsApi[F[_]](
     with Deletable[F]
     with DeletableTerminated[F]
     with GroupDeletable[F] {
-  val resourceUri = uri("/apis") / "apps" / "v1" / "namespaces" / namespace / "statefulsets"
+  val resourceUri = uri"/apis" / "apps" / "v1" / "namespaces" / namespace / "statefulsets"
 }

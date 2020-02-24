@@ -6,7 +6,7 @@ import com.goyeau.kubernetes.client.operation._
 import io.circe._
 import io.k8s.api.core.v1.{ConfigMap, ConfigMapList}
 import org.http4s.client.Client
-import org.http4s.Uri.uri
+import org.http4s.implicits._
 
 private[client] case class ConfigMapsApi[F[_]](httpClient: Client[F], config: KubeConfig)(
   implicit
@@ -15,7 +15,7 @@ private[client] case class ConfigMapsApi[F[_]](httpClient: Client[F], config: Ku
   encoder: Encoder[ConfigMap],
   decoder: Decoder[ConfigMap]
 ) extends Listable[F, ConfigMapList] {
-  val resourceUri = uri("/api") / "v1" / "configmaps"
+  val resourceUri = uri"/api" / "v1" / "configmaps"
 
   def namespace(namespace: String) = NamespacedConfigMapsApi(httpClient, config, namespace)
 }
@@ -36,5 +36,5 @@ private[client] case class NamespacedConfigMapsApi[F[_]](
     with Listable[F, ConfigMapList]
     with Deletable[F]
     with GroupDeletable[F] {
-  val resourceUri = uri("/api") / "v1" / "namespaces" / namespace / "configmaps"
+  val resourceUri = uri"/api" / "v1" / "namespaces" / namespace / "configmaps"
 }

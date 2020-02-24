@@ -6,7 +6,7 @@ import com.goyeau.kubernetes.client.operation._
 import io.circe._
 import io.k8s.api.policy.v1beta1.{PodDisruptionBudget, PodDisruptionBudgetList}
 import org.http4s.client.Client
-import org.http4s.Uri.uri
+import org.http4s.implicits._
 
 private[client] case class PodDisruptionBudgetsApi[F[_]](httpClient: Client[F], config: KubeConfig)(
   implicit
@@ -15,7 +15,7 @@ private[client] case class PodDisruptionBudgetsApi[F[_]](httpClient: Client[F], 
   encoder: Encoder[PodDisruptionBudget],
   decoder: Decoder[PodDisruptionBudget]
 ) extends Listable[F, PodDisruptionBudgetList] {
-  val resourceUri = uri("/apis") / "policy" / "v1beta1" / "poddisruptionbudgets"
+  val resourceUri = uri"/apis" / "policy" / "v1beta1" / "poddisruptionbudgets"
 
   def namespace(namespace: String) = NamespacedPodDisruptionBudgetApi(httpClient, config, namespace)
 }
@@ -36,5 +36,5 @@ private[client] case class NamespacedPodDisruptionBudgetApi[F[_]](
     with Listable[F, PodDisruptionBudgetList]
     with Deletable[F]
     with GroupDeletable[F] {
-  val resourceUri = uri("/apis") / "policy" / "v1beta1" / "namespaces" / namespace / "poddisruptionbudgets"
+  val resourceUri = uri"/apis" / "policy" / "v1beta1" / "namespaces" / namespace / "poddisruptionbudgets"
 }

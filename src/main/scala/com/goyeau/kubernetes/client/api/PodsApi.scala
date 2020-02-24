@@ -3,17 +3,16 @@ package com.goyeau.kubernetes.client.api
 import java.net.URLEncoder
 
 import scala.concurrent.duration._
-import scala.concurrent.Future
+import scala.concurrent.{Future}
 import akka.actor.ActorSystem
 import akka.http.scaladsl.{ConnectionContext, Http}
 import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
 import akka.http.scaladsl.model.ws.{BinaryMessage, Message, TextMessage, WebSocketRequest}
 import akka.http.scaladsl.settings.ClientConnectionSettings
-import akka.stream.{ActorMaterializer, Materializer}
 import akka.stream.scaladsl.BidiFlow
 import akka.stream.scaladsl.Flow
 import akka.util.ByteString
-import cats.effect.{Async, IO}
+import cats.effect.{Async, ContextShift, IO}
 import com.goyeau.kubernetes.client.operation._
 import com.goyeau.kubernetes.client.util.SslContexts
 import com.goyeau.kubernetes.client.{KubeConfig, KubernetesException}
@@ -25,7 +24,7 @@ import org.http4s
 import org.http4s.AuthScheme
 import org.http4s.Credentials.Token
 import org.http4s.client.Client
-import org.http4s.Uri.uri
+import org.http4s.implicits._
 
 private[client] case class PodsApi[F[_]](httpClient: Client[F], config: KubeConfig)(
   implicit
@@ -34,7 +33,7 @@ private[client] case class PodsApi[F[_]](httpClient: Client[F], config: KubeConf
   encoder: Encoder[Pod],
   decoder: Decoder[Pod]
 ) extends Listable[F, PodList] {
-  val resourceUri = uri("/api") / "v1" / "pods"
+  val resourceUri = uri"/api" / "v1" / "pods"
 
   def namespace(namespace: String) = NamespacedPodsApi(httpClient, config, namespace)
 }
@@ -57,7 +56,7 @@ private[client] case class NamespacedPodsApi[F[_]](
     with Deletable[F]
     with DeletableTerminated[F]
     with GroupDeletable[F] {
-  val resourceUri = uri("/api") / "v1" / "namespaces" / namespace / "pods"
+  val resourceUri = uri"/api" / "v1" / "namespaces" / namespace / "pods"
 
   def exec[Result](
     podName: String,
@@ -69,8 +68,8 @@ private[client] case class NamespacedPodsApi[F[_]](
     stderr: Boolean = true,
     tty: Boolean = false
   )(implicit actorSystem: ActorSystem): F[Result] = {
-    implicit val materializer: Materializer = ActorMaterializer()
     import actorSystem.dispatcher
+    implicit val cs: ContextShift[IO] = IO.contextShift(actorSystem.dispatcher)
 
     IO.fromFuture(IO {
         val containerParam = container.fold("")(containerName => s"&container=$containerName")
