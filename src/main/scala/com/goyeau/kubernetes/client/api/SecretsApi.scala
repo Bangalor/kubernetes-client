@@ -3,15 +3,14 @@ package com.goyeau.kubernetes.client.api
 import java.util.Base64
 
 import cats.effect.Sync
-import com.goyeau.kubernetes.client.KubeConfig
 import com.goyeau.kubernetes.client.operation._
 import io.circe._
 import io.k8s.api.core.v1.{Secret, SecretList}
-import org.http4s.Status
+import org.http4s.{Status, Uri}
 import org.http4s.client.Client
 import org.http4s.implicits._
 
-private[client] case class SecretsApi[F[_]](httpClient: Client[F], config: KubeConfig)(
+private[client] case class SecretsApi[F[_]](httpClient: Client[F], server: Uri)(
   implicit
   val F: Sync[F],
   val listDecoder: Decoder[SecretList],
@@ -20,12 +19,12 @@ private[client] case class SecretsApi[F[_]](httpClient: Client[F], config: KubeC
 ) extends Listable[F, SecretList] {
   val resourceUri = uri"/api" / "v1" / "secrets"
 
-  def namespace(namespace: String) = NamespacedSecretsApi(httpClient, config, namespace)
+  def namespace(namespace: String) = NamespacedSecretsApi(httpClient, server, namespace)
 }
 
 private[client] case class NamespacedSecretsApi[F[_]](
   httpClient: Client[F],
-  config: KubeConfig,
+  server: Uri,
   namespace: String
 )(
   implicit

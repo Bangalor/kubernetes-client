@@ -1,14 +1,14 @@
 package com.goyeau.kubernetes.client.api
 
 import cats.effect.Sync
-import com.goyeau.kubernetes.client.KubeConfig
 import com.goyeau.kubernetes.client.operation._
 import io.circe._
 import io.k8s.api.core.v1.{ConfigMap, ConfigMapList}
+import org.http4s.Uri
 import org.http4s.client.Client
 import org.http4s.implicits._
 
-private[client] case class ConfigMapsApi[F[_]](httpClient: Client[F], config: KubeConfig)(
+private[client] case class ConfigMapsApi[F[_]](httpClient: Client[F], server: Uri)(
   implicit
   val F: Sync[F],
   val listDecoder: Decoder[ConfigMapList],
@@ -17,12 +17,12 @@ private[client] case class ConfigMapsApi[F[_]](httpClient: Client[F], config: Ku
 ) extends Listable[F, ConfigMapList] {
   val resourceUri = uri"/api" / "v1" / "configmaps"
 
-  def namespace(namespace: String) = NamespacedConfigMapsApi(httpClient, config, namespace)
+  def namespace(namespace: String) = NamespacedConfigMapsApi(httpClient, server, namespace)
 }
 
 private[client] case class NamespacedConfigMapsApi[F[_]](
   httpClient: Client[F],
-  config: KubeConfig,
+  server: Uri,
   namespace: String
 )(
   implicit

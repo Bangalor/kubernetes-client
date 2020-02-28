@@ -3,7 +3,7 @@ package com.goyeau.kubernetes.client.api
 import java.net.URLEncoder
 
 import scala.concurrent.duration._
-import scala.concurrent.{Future}
+import scala.concurrent.Future
 import akka.actor.ActorSystem
 import akka.http.scaladsl.{ConnectionContext, Http}
 import akka.http.scaladsl.model.headers.{Authorization, OAuth2BearerToken}
@@ -14,19 +14,24 @@ import akka.stream.scaladsl.Flow
 import akka.util.ByteString
 import cats.effect.{Async, ContextShift, IO}
 import com.goyeau.kubernetes.client.operation._
-import com.goyeau.kubernetes.client.util.SslContexts
-import com.goyeau.kubernetes.client.{KubeConfig, KubernetesException}
+import com.goyeau.kubernetes.client.KubernetesException
 import io.circe._
 import io.circe.parser.decode
 import io.k8s.api.core.v1.{Pod, PodList}
 import io.k8s.apimachinery.pkg.apis.meta.v1.Status
+import javax.net.ssl.SSLContext
 import org.http4s
-import org.http4s.AuthScheme
+import org.http4s.{AuthScheme, Uri}
 import org.http4s.Credentials.Token
 import org.http4s.client.Client
 import org.http4s.implicits._
 
-private[client] case class PodsApi[F[_]](httpClient: Client[F], config: KubeConfig)(
+private[client] case class PodsApi[F[_]](
+  httpClient: Client[F],
+  server: Uri,
+  authorization: Option[org.http4s.headers.Authorization],
+  sslContext: SSLContext
+)(
   implicit
   val F: Async[F],
   val listDecoder: Decoder[PodList],
@@ -35,12 +40,14 @@ private[client] case class PodsApi[F[_]](httpClient: Client[F], config: KubeConf
 ) extends Listable[F, PodList] {
   val resourceUri = uri"/api" / "v1" / "pods"
 
-  def namespace(namespace: String) = NamespacedPodsApi(httpClient, config, namespace)
+  def namespace(namespace: String) = NamespacedPodsApi(httpClient, server, authorization, sslContext, namespace)
 }
 
 private[client] case class NamespacedPodsApi[F[_]](
   httpClient: Client[F],
-  config: KubeConfig,
+  server: Uri,
+  authorization: Option[org.http4s.headers.Authorization],
+  sslContext: SSLContext,
   namespace: String
 )(
   implicit
@@ -75,7 +82,7 @@ private[client] case class NamespacedPodsApi[F[_]](
         val containerParam = container.fold("")(containerName => s"&container=$containerName")
         val commandParam = command.map(c => s"&command=${URLEncoder.encode(c, "UTF-8")}").mkString
         val params = s"stdin=$stdin&stdout=$stdout&stderr=$stderr&tty=$tty$containerParam$commandParam"
-        val uri = s"${config.server.toString.replaceFirst("http", "ws")}/$resourceUri/$podName/exec?$params"
+        val uri = s"${server.toString.replaceFirst("http", "ws")}/$resourceUri/$podName/exec?$params"
 
         val mapFlow = BidiFlow.fromFlows(
           Flow.fromFunction[Message, Message](identity),
@@ -98,11 +105,11 @@ private[client] case class NamespacedPodsApi[F[_]](
         val (upgradeResponse, eventualResult) = Http().singleWebSocketRequest(
           WebSocketRequest(
             uri,
-            extraHeaders = config.authorization.toList.map(convertAuthorization),
+            extraHeaders = authorization.toList.map(convertAuthorization),
             subprotocol = Option("v4.channel.k8s.io")
           ),
           flow.join(mapFlow),
-          ConnectionContext.https(SslContexts.fromConfig(config)),
+          ConnectionContext.https(sslContext),
           settings = ClientConnectionSettings(actorSystem).withIdleTimeout(10.minutes)
         )
 

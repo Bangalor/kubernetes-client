@@ -1,14 +1,14 @@
 package com.goyeau.kubernetes.client.api
 
 import cats.effect.Sync
-import com.goyeau.kubernetes.client.KubeConfig
 import com.goyeau.kubernetes.client.operation._
 import io.circe.{Decoder, Encoder}
 import io.k8s.api.core.v1.{Namespace, NamespaceList}
+import org.http4s.Uri
 import org.http4s.implicits._
 import org.http4s.client.Client
 
-private[client] case class NamespacesApi[F[_]](httpClient: Client[F], config: KubeConfig)(
+private[client] case class NamespacesApi[F[_]](httpClient: Client[F], server: Uri)(
   implicit
   val F: Sync[F],
   val listDecoder: Decoder[NamespaceList],

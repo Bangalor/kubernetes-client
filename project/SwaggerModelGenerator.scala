@@ -35,6 +35,7 @@ object SwaggerModelGenerator extends AutoPlugin {
       "io.k8s.apimachinery.pkg.runtime",
       "io.k8s.api.storage.v1",
       "io.k8s.api.autoscaling.v1",
+      "io.k8s.api.autoscaling.v2beta1",
       "io.k8s.apimachinery.pkg.api",
       "io.k8s.kubernetes.pkg.apis.storage.v1",
       "io.k8s.apimachinery.pkg.apis.meta.v1",
@@ -62,8 +63,9 @@ object SwaggerModelGenerator extends AutoPlugin {
     val className = split.last
     val file = outputDir / sanitizeClassPath(split.init.mkString("/")) / s"$className.scala"
 
-    val generatedClass = definitionJson.as[Definition].fold(throw _, identity) match {
-      case Definition(desc, required, properties, None) =>
+    val definition = definitionJson.as[Definition].fold(throw _, identity)
+    val generatedClass = definition match {
+      case Definition(desc, required, properties, Some("object")) =>
         val description = generateDescription(desc)
         val attributes = generateAttributes(properties.toSeq.flatten.sortBy(_._1), required.toSeq.flatten)
         val caseClass = s"""import io.circe._
